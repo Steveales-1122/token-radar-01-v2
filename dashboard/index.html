@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Radar v2 — Launch Velocity &amp; Risk Radar</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%235eead4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Token Radar <span class="v2">v2</span></h1>
+    <p class="tag">Which pre-token protocol is worth farming next — ranked by implied value, velocity and risk.</p>
+  </div>
+  <div class="meta" id="meta"></div>
+</header>
+
+<nav class="tabs" id="tabs" aria-label="Views">
+  <button data-view="board" class="active">Board</button>
+  <button data-view="velocity">Velocity</button>
+  <button data-view="categories">Categories</button>
+  <button data-view="chains">Chains</button>
+  <button data-view="watchlist">Watchlist <span id="wl-count" class="pill">0</span></button>
+  <button data-view="sandbox">Model sandbox</button>
+</nav>
+
+<section class="controls" id="controls">
+  <input id="q" type="search" placeholder="Search name or slug…" aria-label="Search protocols">
+  <select id="f-cat" aria-label="Filter by category"><option value="">All categories</option></select>
+  <select id="f-chain" aria-label="Filter by chain"><option value="">All chains</option></select>
+  <select id="f-risk" aria-label="Filter by risk tier">
+    <option value="">Any risk</option>
+    <option value="Low">Low risk</option>
+    <option value="Medium">Medium risk</option>
+    <option value="High">High risk</option>
+  </select>
+  <select id="f-sort" aria-label="Sort board">
+    <option value="implied">Sort: implied value</option>
+    <option value="velocity">Sort: velocity</option>
+    <option value="riskadj">Sort: risk-adjusted</option>
+    <option value="tvl">Sort: TVL</option>
+    <option value="age">Sort: youngest first</option>
+  </select>
+  <label class="check"><input id="f-watch" type="checkbox"> Watchlist only</label>
+</section>
+
+<main>
+  <section id="view-board" class="view active">
+    <div class="cards" id="risk-cards"></div>
+    <div class="panel">
+      <h2>Implied value vs TVL <span class="hint">each dot is a protocol, coloured by risk tier — the radar's shape at a glance</span></h2>
+      <svg id="scatter" viewBox="0 0 720 300" role="img" aria-label="Scatter plot of implied value against TVL"></svg>
+      <p class="legend"><span class="dot low"></span> Low risk <span class="dot medium"></span> Medium <span class="dot high"></span> High</p>
+    </div>
+    <div class="panel">
+      <h2>Ranked board <span class="hint" id="board-count"></span></h2>
+      <table id="board">
+        <thead><tr>
+          <th>#</th><th>Protocol</th><th>Category</th><th>Chains</th><th>TVL</th><th>7d</th>
+          <th>Implied value</th><th>Velocity</th><th>Risk</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="more"><button id="more-rows">Show more</button></p>
+    </div>
+  </section>
+
+  <section id="view-velocity" class="view">
+    <div class="panel">
+      <h2>Launch velocity <span class="hint">momentum first, size second — who is heating up right now</span></h2>
+      <p class="note">Velocity is the 7d TVL change rescaled to 0–100: −60% is 0, +120% is 100. A protocol that just doubled its TVL in a week scores near the top whatever its size. Velocity is not a promise: parabolic rows are flagged in the risk column.</p>
+      <table id="velocity-table">
+        <thead><tr><th>#</th><th>Protocol</th><th>Category</th><th>TVL</th><th>7d</th><th>Velocity</th><th>Implied value</th><th>Risk</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="view-categories" class="view">
+    <div class="panel">
+      <h2>Categories <span class="hint">where the board's value sits, by category</span></h2>
+      <div class="grid" id="cat-grid"></div>
+    </div>
+  </section>
+
+  <section id="view-chains" class="view">
+    <div class="panel">
+      <h2>Chains <span class="hint">where the board's TVL sits, by chain</span></h2>
+      <div class="grid" id="chain-grid"></div>
+    </div>
+  </section>
+
+  <section id="view-watchlist" class="view">
+    <div class="panel">
+      <h2>Watchlist &amp; alerts <span class="hint">star rows on the board; they stay in this browser</span></h2>
+      <div class="alerts">
+        <label>Alert me when a watched row's 7d change passes
+          <input id="alert-pct" type="number" value="25" min="1" max="120" step="1"> %
+          <span class="hint">in either direction</span></label>
+        <p id="alert-hits" class="note"></p>
+      </div>
+      <table id="watch-table">
+        <thead><tr><th>#</th><th>Protocol</th><th>Category</th><th>TVL</th><th>7d</th><th>Implied value</th><th>Velocity</th><th>Risk</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="note" id="watch-empty">Nothing watched yet — star a row on the Board tab.</p>
+    </div>
+  </section>
+
+  <section id="view-sandbox" class="view">
+    <div class="panel">
+      <h2>Model sandbox <span class="hint">move a slider, the board re-ranks in the page — the model is checkable, not a black box</span></h2>
+      <div class="sliders" id="sliders"></div>
+      <p class="note">The sandbox re-runs the same scoring the program ran, on the same snapshot data. It changes this page only; the submitted board is the one the program wrote.</p>
+      <table id="sandbox-table">
+        <thead><tr><th>#</th><th>Protocol</th><th>Category</th><th>TVL</th><th>7d</th><th>Implied value</th><th>Risk-adjusted</th><th>Velocity</th><th>Risk</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<aside id="drawer" class="drawer" aria-label="Protocol detail" hidden>
+  <button id="drawer-close" class="close" aria-label="Close detail">×</button>
+  <div id="drawer-body"></div>
+</aside>
+
+<footer>
+  <p><strong>Method.</strong> Implied value = TVL × category multiple × growth × maturity × chain breadth. Velocity = 7d TVL change rescaled 0–100. Risk is a 0–100 proxy from four flags the snapshot can see — single-chain, very young, violent 7d swing, tiny TVL — and the risk-adjusted value discounts the implied value by half the risk score. The snapshot carries no holder, audit or lock data, and this radar never pretends it does: check the protocol's own pages before depositing, and never pay to claim.</p>
+  <p id="foot-source"></p>
+</footer>
+
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
